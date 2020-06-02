@@ -94,6 +94,6 @@ ApcRoutine(
 	PVOID SystemArgument3
 	)
 {
-	printf("yo wtf?? I'm was not alertable!\n");
+	printf("What? I'm was not alertable!\n");
 	Sleep(100);
 }

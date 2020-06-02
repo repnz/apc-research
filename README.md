@@ -39,3 +39,38 @@ This is an example showing how special kernel APC is delivered to a thread even 
 
 This shows how we can abuse the NtTestAlert call that is called before the win32 start address of the
 thread to execute an APC.
+
+### NtWaitForSingleObjectUserApc
+
+This test shows how NtWaitForSingleObject returns STATUS_USER_APC when an APC is delivered to the thread. 
+WaitForSingleObject() is a wrapper that simply ignores this value and waits again.
+
+### InitialNtTestAlertCreateProcessInjection
+
+This is an example of an injection technique that uses the initial NtTestAlert.
+
+### AlertableStateApcPending
+
+This example shows what happens when you enter an alertable state after queueing an APC.
+
+### QueueApcAndNtTestAlert
+
+This example shows how NtTestAlert can be used to execute pending APCs.
+
+### SimpleUserApcDriver
+
+A driver that lets a user mode caller to run 2 functions:
+
+1 - SimpleNtQueueApcThread: A simple implementation that shows how a user APC can be queued from 
+kernel mode.
+
+2 - SimpleNtWaitForSingleObject: A simple implementation of NtWaitForSingleObject for event objects.
+
+### SimpleUserApcDriverTester
+
+Test the SimpleNtQueueApcThread function.
+
+### SimpleUserApcWaitTester
+
+Test the SimpleNtWaitForSingleObject function.
+
