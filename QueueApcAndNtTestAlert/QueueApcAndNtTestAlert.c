@@ -9,6 +9,7 @@ NTSTATUS
 	);
 
 VOID
+NTAPI
 ApcCode(
 	ULONG_PTR dwData
 	)

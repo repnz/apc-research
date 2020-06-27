@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 DWORD
+WINAPI
 AlertableWaitingThread(
 	PVOID ThreadArgument
 	)

@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 DWORD
+WINAPI
 WorkerThread(
 	PVOID EventHandleArg
 );
@@ -45,6 +46,7 @@ UserApc(
 }
 
 DWORD
+WINAPI
 WorkerThread(
 	PVOID ThreadParam
 	) 

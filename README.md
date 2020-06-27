@@ -2,6 +2,10 @@
 
 This repo will contain all the code related to the APC research including reverse engineered sources.
 
+### ApcLib
+
+A library with common functionality related to the supplied samples.
+
 ### ApcDllInjector
 
 Allows to inject a DLL using a user mode APC from user mode.
@@ -74,3 +78,27 @@ Test the SimpleNtQueueApcThread function.
 
 Test the SimpleNtWaitForSingleObject function.
 
+### 32bitApc
+
+A x86 sample that uses QueueUserAPC. Can be used to debug the Wow64 APC.
+
+### NullApcRoutine
+
+A sample that can be used to debug a user APC with a null ApcRoutine. This is 
+interesting because it actually creates a KernelMode APC.
+
+### QueueMultipleUserAPCs
+
+A sample that shows the behavior with multiple pending APCs.
+
+
+### Wow64To64bitInjector
+
+Shows how a Wow64 process can queue an APC in a 64 bit process.
+
+### x64ToWow64ApcInjector
+
+Shows how a 64 bit process can queue an APC in a Wow64 process. The APC can be one of 2 kinds:
+
+1. A 64 bit APC. used to execute a 64 bit ApcRoutine.
+2. A Wow64 APC: The ApcRoutine should run in a Wow64 environment.

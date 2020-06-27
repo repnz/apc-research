@@ -4,12 +4,14 @@
 
 
 VOID
+WINAPI
 ApcRoutine(
 	ULONG_PTR dwData
 	);
 
 
 DWORD
+WINAPI
 NewThread(
 	PVOID ThreadArgument
 	);
@@ -20,7 +22,6 @@ main(
 	const char** argv
 )
 {
-	
 	HANDLE ThreadHandle = CreateThread(
 								NULL,
 								0,
@@ -49,6 +50,7 @@ main(
 }
 
 VOID
+WINAPI
 ApcRoutine(
 	ULONG_PTR dwData
 )
@@ -58,6 +60,7 @@ ApcRoutine(
 
 
 DWORD
+WINAPI
 NewThread(
 	PVOID ThreadArgument
 	)

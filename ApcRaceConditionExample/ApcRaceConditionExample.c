@@ -46,6 +46,7 @@ DWORD ItemList[1000];
 DWORD CurrentItemIndex;
 
 DWORD
+WINAPI
 UseListWorker(
 	PVOID Parameter
 	);
@@ -102,6 +103,7 @@ main(
 }
 
 DWORD
+WINAPI
 UseListWorker(
 	PVOID Parameter
 	)
@@ -118,7 +120,7 @@ UseListWorker(
 
 		for (ULONG i = 0; i < 1000; i++) {
 			if (ItemList[i] != 1) {
-				printf("Wtf?????\n");
+				printf("What?? I acquired the lock, how come the array changed?\n");
 				exit(-1);
 			}
 		}

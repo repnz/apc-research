@@ -1,65 +1,8 @@
 #include <Windows.h>
 #include <stdio.h>
 #include <winternl.h>
+#include <ApcLib/ApcLib.h>
 
-typedef
-VOID
-(*PPS_APC_ROUTINE)(
-	PVOID SystemArgument1,
-	PVOID SystemArgument2,
-	PVOID SystemArgument3
-	);
-
-typedef
-NTSTATUS
-(NTAPI* PNTQUEUEAPCTHREAD)(
-	HANDLE ThreadHandle,
-	PPS_APC_ROUTINE ApcRoutine,
-	PVOID SystemArgument1,
-	PVOID SystemArgument2,
-	PVOID SystemArgument3
-	);
-
-
-typedef enum _QUEUE_USER_APC_FLAGS {
-	QueueUserApcFlagsNone,
-	QueueUserApcFlagsSpecialUserApc,
-	QueueUserApcFlagsMaxValue
-} QUEUE_USER_APC_FLAGS;
-
-typedef union _USER_APC_OPTION {
-	ULONG_PTR UserApcFlags;
-	HANDLE MemoryReserveHandle;
-} USER_APC_OPTION, * PUSER_APC_OPTION;
-
-
-typedef NTSTATUS
-(NTAPI* PNT_QUEUE_APC_THREAD_EX)(
-	IN HANDLE ThreadHandle,
-	IN USER_APC_OPTION UserApcOption,
-	IN PPS_APC_ROUTINE ApcRoutine,
-	IN PVOID SystemArgument1 OPTIONAL,
-	IN PVOID SystemArgument2 OPTIONAL,
-	IN PVOID SystemArgument3 OPTIONAL
-	);
-
-typedef
-NTSTATUS
-(NTAPI* PNTGETNEXTTHREAD)(
-	_In_ HANDLE ProcessHandle,
-	_In_ HANDLE ThreadHandle,
-	_In_ ACCESS_MASK DesiredAccess,
-	_In_ ULONG HandleAttributes,
-	_In_ ULONG Flags,
-	_Out_ PHANDLE NewThreadHandle
-	);
-
-
-PNTGETNEXTTHREAD NtGetNextThread;
-PNTQUEUEAPCTHREAD NtQueueApcThread;
-PNT_QUEUE_APC_THREAD_EX NtQueueApcThreadEx;
-
-PVOID LoadLibraryAPtr;
 
 typedef enum _APC_TYPE {
 	ApcTypeWin32,
@@ -73,54 +16,6 @@ typedef struct _APC_INJECTOR_ARGS {
 	ULONG ProcessId;
 	ULONG ThreadId;
 } APC_INJECTOR_ARGS, * PAPC_INJECTOR_ARGS;
-
-VOID
-InitializeProcedures(
-	VOID
-)
-{
-	HMODULE NtdllHandle = GetModuleHandle("ntdll.dll");
-	HMODULE Kernel32Handle = GetModuleHandle("kernel32.dll");
-
-	NtGetNextThread = (PNTGETNEXTTHREAD)GetProcAddress(NtdllHandle, "NtGetNextThread");
-	NtQueueApcThread = (PNTQUEUEAPCTHREAD)GetProcAddress(NtdllHandle, "NtQueueApcThread");
-	NtQueueApcThreadEx = (PNT_QUEUE_APC_THREAD_EX)GetProcAddress(NtdllHandle, "NtQueueApcThreadEx");
-	LoadLibraryAPtr = GetProcAddress(Kernel32Handle, "LoadLibraryA");
-}
-
-PVOID WriteLibraryNameToRemote(
-	HANDLE ProcessHandle,
-	PCSTR Library
-)
-{
-	SIZE_T LibraryLength = strlen(Library);
-
-	PVOID LibraryRemoteAddress = VirtualAllocEx(
-		ProcessHandle,
-		NULL,
-		LibraryLength + 1,
-		MEM_RESERVE | MEM_COMMIT,
-		PAGE_READWRITE
-	);
-
-	if (!LibraryRemoteAddress) {
-		printf("Cannot allocate memory for library path. Error: 0x%08X\n", GetLastError());
-		exit(-1);
-	}
-
-	if (!WriteProcessMemory(
-		ProcessHandle,
-		LibraryRemoteAddress,
-		Library,
-		LibraryLength + 1,
-		NULL
-	)) {
-		printf("Cannot write library path to remote process. Error: 0x%08X\n", GetLastError());
-		exit(-1);
-	}
-
-	return LibraryRemoteAddress;
-}
 
 VOID
 ParseArguments(
@@ -164,50 +59,21 @@ int main(int argc, const char** argv) {
 	NTSTATUS Status;
 	HANDLE ThreadHandle;
 	HANDLE ProcessHandle;
+	PVOID RemoteLibraryAddress;
 
-	InitializeProcedures();
+	InitializeApcLib();
 
 	ParseArguments(argc, argv, &Args);
 
-	ProcessHandle = OpenProcess(
-		PROCESS_QUERY_INFORMATION |
-		PROCESS_VM_OPERATION |
-		PROCESS_VM_WRITE,
-		FALSE,
-		Args.ProcessId
-	);
-
-	if (!ProcessHandle) {
-		printf("Cannot open process handle: 0x%08X\n", GetLastError());
-		exit(-1);
-	}
-
-	PVOID RemoteLibraryAddress = WriteLibraryNameToRemote(ProcessHandle, Args.DllPath);
-
-	if (Args.ThreadId) {
-		ThreadHandle = OpenThread(THREAD_SET_CONTEXT, FALSE, Args.ThreadId);
-
-		if (!ThreadHandle) {
-			printf("Cannt open thread handle 0x%08X\n", GetLastError());
-			exit(-1);
-		}
-	}
-	else {
-		Status = NtGetNextThread(
-			ProcessHandle,
-			NULL,
-			THREAD_SET_CONTEXT,
-			0,
-			0,
+	OpenTargetHandles(
+			Args.ProcessId,
+			Args.ThreadId,
+			&ProcessHandle,
 			&ThreadHandle
 		);
-	}
 
-	if (!NT_SUCCESS(Status)) {
-		printf("Cannot open thread handle 0x%08X\n", Status);
-		exit(-1);
-		return -1;
-	}
+	RemoteLibraryAddress = WriteLibraryNameToRemote(ProcessHandle, Args.DllPath);
+
 
 	switch (Args.ApcType) {
 	case ApcTypeWin32: {
@@ -220,7 +86,7 @@ int main(int argc, const char** argv) {
 	case ApcTypeNative: {
 		Status = NtQueueApcThread(
 			ThreadHandle,
-			LoadLibraryAPtr,
+			(PPS_APC_ROUTINE)LoadLibraryAPtr,
 			RemoteLibraryAddress,
 			NULL,
 			NULL
@@ -239,7 +105,7 @@ int main(int argc, const char** argv) {
 		Status = NtQueueApcThreadEx(
 			ThreadHandle,
 			UserApcOption,
-			LoadLibraryAPtr,
+			(PPS_APC_ROUTINE)LoadLibraryAPtr,
 			RemoteLibraryAddress,
 			NULL,
 			NULL

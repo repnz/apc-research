@@ -13,6 +13,7 @@ DriverQueueApc(
 	);
 
 DWORD
+WINAPI
 ApcThread(
 	PVOID ThreadArgument
 	)
